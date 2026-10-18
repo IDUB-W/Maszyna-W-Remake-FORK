@@ -32,6 +32,8 @@ export type MachineRegisters = Record<RegisterField, number>;
 
 export type RegisterFormats = Record<RegisterFormatField, NumberFormat>;
 
+export type InterruptVectors = [number, number, number, number];
+
 export type Signals = Record<string, boolean>;
 
 export interface Extras {
@@ -46,6 +48,7 @@ export interface Extras {
     apRegister: boolean;
     rintSignal: boolean;
     eniSignal: boolean;
+    eniAlwaysEnabled: boolean;
   };
   dl: boolean;
   jamlExtras: boolean;
@@ -128,7 +131,7 @@ export interface MachineSelectors {
   readonly globalBackdropOpen: boolean;
   readonly localizedLabCatalog: LocalizedLab[];
   readonly selectedLab: Lab | null;
-  readonly rint: boolean;
+  readonly hasPendingInterrupt: boolean;
   readonly highestPriorityIRQ: number | null;
 }
 
@@ -169,6 +172,7 @@ export interface MachineState extends MachineRegisters {
   prevMem: number[];
   addresBits: number;
   codeBits: number;
+  interruptVectors: InterruptVectors;
   mem: number[];
   DEV_READY: number;
   DEV_IN: number;
@@ -269,7 +273,6 @@ export interface MachineActions {
   loadSelectedLab(): void;
   compileCode(): void;
   uncompileCode(): void;
-  handleInterrupt(): void;
   executeLine(): void;
   _refreshHighlight(): void;
   getResolvedPhase(phase: RuntimePhase | null | undefined): MicroPhase;
@@ -333,6 +336,8 @@ export interface MicroActions {
   werb(): void;
   wyrb(): void;
   start(): void;
+  eni(): void;
+  rint(): void;
   werm(): void;
   wyrm(): void;
   wyap(): void;

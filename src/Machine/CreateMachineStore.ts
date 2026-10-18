@@ -1,5 +1,5 @@
 import type { Action } from '@/Shared/Types/Common';
-import type { Machine, MachineStore, RegisterFormats } from '@/Machine/Types/Machine';
+import type { InterruptVectors, Machine, MachineStore, RegisterFormats } from '@/Machine/Types/Machine';
 import { translate } from '../I18n/Translator';
 import { clamp } from '../Shared/Utils/Numbers';
 import { getStorageItem, setStorageItem } from '../Shared/Utils/Storage';
@@ -54,9 +54,6 @@ export const createMachineStore = (): MachineStore => {
   };
   const applySettingChange = (root: string, value: unknown) => {
     if (!restoring) {
-      if (root === 'addresBits') {
-        machine.resizeMemory();
-      }
       if (root === 'lightMode') {
         applyTheme();
       }
@@ -99,7 +96,24 @@ export const createMachineStore = (): MachineStore => {
     }
   };
 
+  const normalizeBitWidths = () => {
+    const wordMask = machine.wordMask();
+    const addressMask = machine.addrMask();
+    for (const field of ['ACC', 'I', 'S', 'X', 'Y', 'RB', 'G', 'JAML', 'BusS', 'DEV_IN', 'DEV_OUT'] as const) {
+      machine[field] &= wordMask;
+    }
+    for (const field of ['programCounter', 'A', 'AP', 'WS', 'BusA'] as const) {
+      machine[field] &= addressMask;
+    }
+    machine.interruptVectors = machine.interruptVectors.map((address) => address & addressMask) as InterruptVectors;
+    machine.mem = machine.mem.map((value) => value & wordMask);
+  };
+
   const changed = (root: string, path: string[], value?: unknown, oldValue?: unknown) => {
+    if (!restoring && (root === 'codeBits' || root === 'addresBits')) {
+      if (root === 'addresBits') machine.resizeMemory();
+      normalizeBitWidths();
+    }
     if (!active) {
       return;
     }
@@ -241,6 +255,7 @@ export const createMachineStore = (): MachineStore => {
     } catch {
       /* Ignore malformed legacy preferences. */
     } finally {
+      normalizeBitWidths();
       restoring = false;
     }
   };

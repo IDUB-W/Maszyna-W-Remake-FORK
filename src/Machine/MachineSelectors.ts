@@ -21,7 +21,7 @@ export const machineSelectors: SelectorMethods & ThisType<Machine> = {
     return this.labCatalog.find((lab) => lab.id === this.selectedLabId) || this.labCatalog[0] || null;
   },
 
-  rint() {
+  hasPendingInterrupt() {
     const active = this.RZ & ~this.RM;
     return active !== 0;
   },
@@ -30,7 +30,7 @@ export const machineSelectors: SelectorMethods & ThisType<Machine> = {
     const active = this.RZ & ~this.RM;
     if (!active) return null;
 
-    for (let i = 3; i >= 0; i--) {
+    for (let i = 0; i < 4; i++) {
       if (active & (1 << i)) {
         return i + 1;
       }

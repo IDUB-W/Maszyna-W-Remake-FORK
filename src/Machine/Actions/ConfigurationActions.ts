@@ -52,6 +52,7 @@ export const configurationActions: Actions & ThisType<Machine> = {
         apRegister: false,
         rintSignal: false,
         eniSignal: false,
+        eniAlwaysEnabled: false,
       },
       dl: false,
       jamlExtras: false,
@@ -88,7 +89,7 @@ export const configurationActions: Actions & ThisType<Machine> = {
     const defaultValues = [0b000001, 0b000010, 0b000100, 0b001000, 0b010001, 0b100010, 0b100100, 0b111000];
 
     for (let i = 0; i < Math.min(defaultValues.length, newSize); i++) {
-      newMem[i] = defaultValues[i];
+      newMem[i] = this.toWord(defaultValues[i]);
     }
 
     this.mem = newMem;
@@ -120,6 +121,7 @@ export const configurationActions: Actions & ThisType<Machine> = {
     // Reset to default settings
     this.codeBits = 6;
     this.addresBits = 4;
+    this.interruptVectors = [1, 2, 3, 4];
     this.oddDelay = 100;
     this.numberFormat = 'dec';
     this.autoResetOnAsmCompile = true;
