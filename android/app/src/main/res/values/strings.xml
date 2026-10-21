@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Maszyna W</string>
+    <string name="title_activity_main">Maszyna W</string>
+    <string name="package_name">com.idubw.maszynaw</string>
+    <string name="custom_url_scheme">com.idubw.maszynaw</string>
+</resources>
