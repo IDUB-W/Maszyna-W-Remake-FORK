@@ -29,7 +29,8 @@
   resize: both;
   width: 800px;
   max-width: 90vw;
-  height: 90vh;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 @media (max-width: 675px) {
   #commandList[data-editor-command-list] {
@@ -71,6 +72,8 @@ body.darkMode #commandList[data-editor-command-list] {
   gap: 0.5rem;
   overflow-y: auto;
   padding-right: 0.5rem;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 #commandListTable > span[data-editor-command-list] {
   color: var(--fontColor, black);
