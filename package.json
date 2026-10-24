@@ -38,13 +38,13 @@
     "@codemirror/view": "^6.23.0",
     "@lezer/highlight": "^1.2.0",
     "@lezer/lr": "^1.4.0",
-    "next": "16.3.4",
+    "next": "^16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "ws": "^8.18.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.3",
+    "@capacitor/cli": "^8.4.3",
     "@eslint/js": "^10.0.1",
     "@lezer/generator": "^1.7.0",
     "@playwright/test": "^1.63.0",
