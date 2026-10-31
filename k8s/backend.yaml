@@ -1,0 +1,161 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: maszyna-w
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hf-proxy-secrets
+  namespace: maszyna-w
+type: Opaque
+stringData:
+  HF_API_TOKEN: "<API>"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hf-proxy-config
+  namespace: maszyna-w
+data:
+  HF_TARGET_URL: "https://your-space.hf.space/chat"
+  ALLOWED_ORIGINS: "https://your-web-domain.example,http://localhost,capacitor://localhost"
+  BODY_LIMIT_MB: "2"
+  PORT: "8787"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hf-proxy
+  namespace: maszyna-w
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hf-proxy
+  template:
+    metadata:
+      labels:
+        app: hf-proxy
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: hf-proxy
+          image: maszyna-w-hf-proxy:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8787
+          envFrom:
+            - configMapRef:
+                name: hf-proxy-config
+            - secretRef:
+                name: hf-proxy-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hf-proxy
+  namespace: maszyna-w
+spec:
+  type: ClusterIP
+  selector:
+    app: hf-proxy
+  ports:
+    - name: http
+      port: 8787
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws-relay
+  namespace: maszyna-w
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ws-relay
+  template:
+    metadata:
+      labels:
+        app: ws-relay
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ws-relay
+          image: maszyna-w-ws-relay:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: websocket
+              containerPort: 8080
+          env:
+            - name: WS_HOST
+              value: "0.0.0.0"
+            - name: WS_PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            tcpSocket:
+              port: websocket
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: websocket
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ws-relay
+  namespace: maszyna-w
+spec:
+  type: ClusterIP
+  selector:
+    app: ws-relay
+  ports:
+    - name: websocket
+      port: 8080
+      targetPort: websocket
+

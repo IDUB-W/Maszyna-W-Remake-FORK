@@ -1,64 +1,103 @@
+
+const http = require('node:http');
 const WebSocket = require('ws');
 
-const forwardedTypes = new Set(['signal-toggle', 'reg-update', 'mem-update', 'color-update', 'button_press']);
+const forwardedTypes = new Set([
+  'signal-toggle',
+  'reg-update',
+  'mem-update',
+  'color-update',
+  'button_press',
+]);
 
-function parsePort(value) {
-  const port = Number(value);
-  if (!String(value).trim() || !Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new RangeError('WS_PORT must be an integer between 0 and 65535.');
+const allowedOrigins = new Set(
+  (process.env.ALLOWED_WS_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+    return;
   }
-  return port;
-}
 
-function createRelayServer({ port = process.env.WS_PORT ?? 8080, host = process.env.WS_HOST || '127.0.0.1', logger = console } = {}) {
-  const server = new WebSocket.Server({ port: parsePort(port), host });
+  res.writeHead(404);
+  res.end();
+});
 
-  server.on('connection', (socket) => {
-    logger?.log('WebSocket client connected');
-    socket.on('message', (raw) => {
-      let message;
-      try {
-        message = JSON.parse(raw.toString());
-      } catch {
-        return;
-      }
-      if (!message || typeof message !== 'object' || Array.isArray(message)) return;
+const wss = new WebSocket.WebSocketServer({
+  noServer: true,
+  maxPayload: 64 * 1024,
+  perMessageDeflate: false,
+});
 
-      if (message.type === 'ping') {
-        socket.send(JSON.stringify({ type: 'pong', t: message.t }));
-        return;
-      }
+server.on('upgrade', async (req, socket, head) => {
+  const url = new URL(req.url, 'http://localhost');
 
-      if (!forwardedTypes.has(message.type)) return;
-      for (const client of server.clients) {
-        if (client !== socket && client.readyState === WebSocket.OPEN) {
-          client.send(raw, { binary: false });
-        }
-      }
-    });
-    socket.on('error', (error) => logger?.error('WebSocket client error:', error.message));
-    socket.on('close', () => logger?.log('WebSocket client disconnected'));
-  });
+  if (url.pathname !== '/ws') {
+    socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+    socket.destroy();
+    return;
+  }
 
-  return server;
-}
+  const origin = req.headers.origin;
 
-if (require.main === module) {
+  // Validate browser origins when supplied.
+  // Authentication is still required for native clients.
+  if (origin && !allowedOrigins.has(origin)) {
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
   try {
-    const server = createRelayServer();
-    server.on('listening', () => {
-      const address = server.address();
-      const host = address.family === 'IPv6' ? `[${address.address}]` : address.address;
-      console.log(`WebSocket server running on ws://${host}:${address.port}`);
-    });
-    server.on('error', (error) => {
-      console.error('WebSocket server error:', error.message);
-      process.exitCode = 1;
-    });
-  } catch (error) {
-    console.error(error.message);
-    process.exitCode = 1;
-  }
-}
+    // TODO: Validate and consume a short-lived, single-use
+    // authentication ticket here.
+    const authenticatedUser = null;
 
-module.exports = { createRelayServer };
+    if (!authenticatedUser) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(req, socket, head, ws => {
+      ws.user = authenticatedUser;
+      wss.emit('connection', ws, req);
+    });
+  } catch {
+    socket.destroy();
+  }
+});
+
+wss.on('connection', socket => {
+  socket.on('message', raw => {
+    let message;
+
+    try {
+      message = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+
+    if (!message || typeof message !== 'object' || Array.isArray(message)) {
+      return;
+    }
+
+    if (!forwardedTypes.has(message.type)) {
+      return;
+    }
+
+    // TODO: Verify that this user is authorized to publish
+    // this message to the selected session/room.
+  });
+});
+
+server.listen(
+  Number(process.env.WS_PORT || 8080),
+  process.env.WS_HOST || '0.0.0.0'
+);
+

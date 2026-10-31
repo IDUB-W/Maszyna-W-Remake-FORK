@@ -1,0 +1,11 @@
+.git
+node_modules
+**/node_modules
+android
+out
+src
+Tests
+Scripts
+HfProxy
+package.json
+package-lock.json
