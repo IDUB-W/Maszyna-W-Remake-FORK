@@ -107,3 +107,44 @@ Testy jednostkowe obejmują assembler, silnik, renderowanie rejestrów, worker c
 - `Tests/` — testy regresji i `Tests/E2e/`.
 
 Pełna inwentaryzacja komponentów, decyzje dla każdej zależności i ograniczenia weryfikacji: [Docs/MigrationAudit.md](./Docs/MigrationAudit.md).
+
+# Maszyna W - Wersja Mobilna (Capacitor)
+
+Projekt w gałęzi `mobile` wykorzystuje środowisko Capacitor do generowania natywnej aplikacji na system Android. Aplikacja została zoptymalizowana do działania na urządzeniach dotykowych w orientacji poziomej (landscape).
+
+## Struktura projektu
+
+Najważniejsze katalogi i pliki z perspektywy rozwoju wersji mobilnej:
+
+* **`android/`** - Natywny projekt Androida wygenerowany przez Capacitor.
+* **`src/`** - Główny katalog z kodem źródłowym aplikacji webowej (TypeScript / React).
+  * **`src/Components/`** - Komponenty interfejsu.
+* **`capacitor.config.ts`** (lub `.json`) - Główny plik konfiguracyjny środowiska Capacitor.
+* **`package.json`** - Plik konfiguracyjny Node.js, zawierający zależności oraz skrypty.
+
+---
+
+## Jak uruchomić i testować aplikację
+
+Każdorazowa modyfikacja plików źródłowych (React/CSS) w folderze `src/` wymaga przebudowania paczki i zsynchronizowania jej ze środowiskiem Androida. 
+
+### Wymagania wstępne
+* Zainstalowane środowisko **Node.js** oraz menedżer pakietów `npm`.
+* **Android Studio** z poprawnie skonfigurowanym emulatorem (np. Medium Phone API 37) lub podłączonym fizycznym urządzeniem.
+
+### Cykl wdrożeniowy (Krok po kroku)
+
+1. **Zainstaluj zależności** (wymagane tylko przy pierwszym uruchomieniu):
+   ```bash
+   npm install
+
+2. **Zbuduj zaktualizowaną wersję statyczną:**
+   W głównym katalogu projektu uruchom:
+   ```bash
+   npm run build:static
+
+3. **Zsynchronizuj kod z Android Studio:**
+   Przekaż nowo zbudowane pliki webowe do natywnego kontenera Capacitor:
+   ```bash
+   npx cap sync
+   
