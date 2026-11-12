@@ -4,15 +4,6 @@ metadata:
   name: maszyna-w
 ---
 apiVersion: v1
-kind: Secret
-metadata:
-  name: hf-proxy-secrets
-  namespace: maszyna-w
-type: Opaque
-stringData:
-  HF_API_TOKEN: "<API>"
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: hf-proxy-config
@@ -22,6 +13,75 @@ data:
   ALLOWED_ORIGINS: "https://your-web-domain.example,http://localhost,capacitor://localhost"
   BODY_LIMIT_MB: "2"
   PORT: "8787"
+  REDIS_URL: "redis://redis:6379"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: maszyna-w
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--save"
+            - ""
+            - "--appendonly"
+            - "no"
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: maszyna-w
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,6 +101,24 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        - name: wait-for-redis
+          image: redis:7-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until redis-cli -h redis -p 6379 ping | grep -q PONG; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
       containers:
         - name: hf-proxy
           image: maszyna-w-hf-proxy:dev
@@ -51,8 +129,6 @@ spec:
           envFrom:
             - configMapRef:
                 name: hf-proxy-config
-            - secretRef:
-                name: hf-proxy-secrets
           resources:
             requests:
               cpu: 50m
