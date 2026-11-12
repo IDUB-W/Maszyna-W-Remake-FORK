@@ -39,7 +39,6 @@ const ApiKeyDialog = ({
         <div className="apiKeyField">
           <input
             id="ai-chat-api-key"
-            ref={inputRef}
             value={apiKeyDraft}
             onChange={updateDraft}
             type={showApiKeyValue ? 'text' : 'password'}

@@ -1,0 +1,35 @@
+services:
+  ws-relay:
+    build:
+      context: .
+      dockerfile: Dockerfile.ws
+    environment:
+      WS_HOST: 0.0.0.0
+      WS_PORT: "8080"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  hf-proxy:
+    depends_on:
+      redis:
+        condition: service_healthy
+    build:
+      context: ./HfProxy
+      dockerfile: Dockerfile
+    env_file:
+      - ./HfProxy/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8787:8787"
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped

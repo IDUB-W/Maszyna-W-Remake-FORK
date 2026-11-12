@@ -16,6 +16,12 @@ export const metadata = {
   },
   appleWebApp: { title: 'Maszyna W' },
 };
+export const viewport = {
+  width: 1366,
+  initialScale: 0.1,
+  minimumScale: 0.1,
+  userScalable: true,
+};
 const RootLayout = ({ children }: ChildrenProps) => {
   return (
     <html lang="pl" suppressHydrationWarning>

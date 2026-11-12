@@ -27,7 +27,8 @@
 
 .apiKeyCard {
   position: relative;
-  overflow: hidden;
+  max-height: 85vh;
+  overflow-y: auto;
   width: min(100%, 430px);
   display: flex;
   flex-direction: column;
